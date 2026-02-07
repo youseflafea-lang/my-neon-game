@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Ball Catcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 100%);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            z-index: 5;
+        }
+
+        .ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #ff00ff;
+            box-shadow: 0 0 20px #ff00ff, inset 0 0 20px rgba(255, 0, 255, 0.1);
+            pointer-events: none;
+        }
+
+        .ui-container * {
+            pointer-events: auto;
+        }
+
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            margin-bottom: 10px;
+        }
+
+        .level {
+            font-size: 20px;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+            margin-bottom: 10px;
+        }
+
+        .timer {
+            font-size: 18px;
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00;
+            margin-bottom: 10px;
+        }
+
+        .high-score {
+            font-size: 16px;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+
+        .start-screen, .game-over-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #00ffff;
+            box-shadow: 0 0 30px #00ffff;
+        }
+
+        .game-title {
+            font-size: 48px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #ff00ff, 0 0 30px #00ffff;
+        }
+
+        .final-score {
+            font-size: 32px;
+            color: #ffff00;
+            text-shadow: 0 0 15px #ffff00;
+            margin: 20px 0;
+        }
+
+        .ai-comment {
+            font-size: 18px;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(0, 255, 0, 0.1);
+            border-radius: 10px;
+            border: 1px solid #00ff00;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading {
+            color: #ff00ff;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .neon-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 0, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-move 10s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes grid-move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        @keyframes screen-shake {
+            0%, 100% { transform: translate(0, 0); }
+            10%, 30%, 50%, 70%, 90% { transform: translate(-5px, -5px); }
+            20%, 40%, 60%, 80% { transform: translate(5px, 5px); }
+        }
+
+        .shaking {
+            animation: screen-shake 0.5s;
+        }
+
+        .settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 15;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ff00ff;
+            transition: all 0.3s ease;
+        }
+
+        .settings-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #ff00ff;
+        }
+
+        .settings-panel {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px #00ffff;
+            z-index: 25;
+            min-width: 200px;
+        }
+
+        .settings-panel h3 {
+            color: #00ffff;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .setting-item {
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ffff00;
+        }
+
+        .setting-item input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .pause-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #ffff00;
+            box-shadow: 0 0 30px #ffff00;
+            z-index: 30;
+            text-align: center;
+        }
+
+        .pause-menu h2 {
+            color: #ffff00;
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ffff00;
+        }
+
+        .pause-menu p {
+            color: #00ffff;
+            margin-bottom: 20px;
+        }
+
+        .blurred {
+            filter: blur(5px);
+        }
+    </style>
+</head>
+<body>
+    <div class="neon-grid"></div>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="ui-container">
+        <div class="score">Score: <span id="scoreValue">0</span></div>
+        <div class="level">Level: <span id="levelValue">1</span></div>
+        <div class="timer">Time: <span id="timeValue">60</span>s</div>
+        <div class="high-score">High Score: <span id="highScoreValue">0</span></div>
+    </div>
+
+    <div class="settings-btn" onclick="toggleSettings()">⚙️</div>
+    
+    <div class="settings-panel hidden" id="settingsPanel">
+        <h3>Settings</h3>
+        <div class="setting-item">
+            <label>Music Volume:</label>
+            <input type="range" id="volumeSlider" min="0" max="100" value="30" onchange="updateVolume(this.value)">
+            <span id="volumeValue">30%</span>
+        </div>
+        <button class="btn" onclick="toggleSettings()">Close</button>
+    </div>
+
+    <div class="pause-menu hidden" id="pauseMenu">
+        <h2>PAUSED</h2>
+        <p>Press ESC to resume</p>
+        <button class="btn" onclick="resumeGame()">RESUME</button>
+        <button class="btn" onclick="restartGame()">RESTART</button>
+    </div>
+
+    <div class="start-screen" id="startScreen">
+        <h1 class="game-title">NEON BALL CATCHER</h1>
+        <p style="color: #00ffff; margin-bottom: 20px;">Click the falling balls to score points!</p>
+        <button class="btn" onclick="startGame()">START GAME</button>
+    </div>
+
+    <div class="game-over-screen hidden" id="gameOverScreen">
+        <h1 class="game-title">GAME OVER</h1>
+        <div class="final-score">Final Score: <span id="finalScoreValue">0</span></div>
+        <div class="ai-comment" id="aiComment">
+            <span class="loading">Getting AI comment...</span>
+        </div>
+        <button class="btn" onclick="restartGame()">PLAY AGAIN</button>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        // Replace this with your actual Google Gemini API Key
+        const GEMINI_API_KEY = 'AIzaSyDdMplgtwEOuXVrY8T2ug3WhUxQ9g8W6qg';
+        // Game configuration
+        const GAME_DURATION = 60; // seconds
+        const INITIAL_BALL_SPAWN_RATE = 1000; // milliseconds
+        const MIN_BALL_SPEED = 2;
+        const MAX_BALL_SPEED = 6;
+        const MIN_BALL_SIZE = 20;
+        const MAX_BALL_SIZE = 40;
+        const TRAP_SPAWN_CHANCE = 0.15; // 15% chance for trap ball
+        const POINTS_PER_LEVEL = [0, 150, 300, 450, 600, 750, 900, 1050, 1200, 1350]; // Level thresholds
+        const MAX_LEVEL = 10;
+        const TIME_BONUS_PER_LEVEL = 10; // seconds added per level
+        
+        // ==================== GAME VARIABLES ====================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let score = 0;
+        let timeLeft = GAME_DURATION;
+        let gameRunning = false;
+        let isPaused = false;
+        let balls = [];
+        let particles = [];
+        let highScore = localStorage.getItem('ballCatcherHighScore') || 0;
+        let level = 1;
+        let currentBallSpawnRate = INITIAL_BALL_SPAWN_RATE;
+        let gameTimer = null;
+        let ballSpawnTimer = null;
+        let animationId = null;
+        let isShaking = false;
+        let backgroundMusic = null;
+        let musicVolume = 0.3;
+        let gravity = 0.1;
+        let zigzagAmplitude = 0;
+        let shrinkingRate = 0;
+        let backgroundTint = 'rgba(0, 0, 0, 0)';
+
+        // ==================== INITIALIZATION ====================
+        function init() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Mouse events
+            canvas.addEventListener('click', handleClick);
+            canvas.addEventListener('mousedown', handleMouseDown);
+            
+            // Touch events
+            canvas.addEventListener('touchstart', handleTouchStart);
+            canvas.addEventListener('touchend', handleTouchEnd);
+            
+            // Keyboard events
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Initialize background music
+            initBackgroundMusic();
+            
+            document.getElementById('highScoreValue').textContent = highScore;
+        }
+
+        function initBackgroundMusic() {
+            // Create a simple background music using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create a simple melody
+            const playNote = (frequency, startTime, duration) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(musicVolume * 0.1, startTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                
+                oscillator.start(startTime);
+                oscillator.stop(startTime + duration);
+            };
+            
+            // Simple looping melody
+            const melody = [
+                {freq: 261.63, duration: 0.2}, // C
+                {freq: 293.66, duration: 0.2}, // D
+                {freq: 329.63, duration: 0.2}, // E
+                {freq: 261.63, duration: 0.2}, // C
+                {freq: 329.63, duration: 0.2}, // E
+                {freq: 392.00, duration: 0.4}, // G
+            ];
+            
+            let currentTime = audioContext.currentTime;
+            
+            const playMelody = () => {
+                if (!backgroundMusic || gameRunning) {
+                    melody.forEach((note, index) => {
+                        playNote(note.freq, currentTime + index * 0.3, note.duration);
+                    });
+                    currentTime += melody.length * 0.3;
+                }
+            };
+            
+            // Start the music loop
+            backgroundMusic = setInterval(playMelody, 2000);
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Escape') {
+                if (gameRunning && !isPaused) {
+                    pauseGame();
+                } else if (isPaused) {
+                    resumeGame();
+                }
+            }
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // ==================== BALL CLASS ====================
+        class Ball {
+            constructor() {
+                this.isTrap = Math.random() < TRAP_SPAWN_CHANCE;
+                this.isFake = !this.isTrap && level >= 8 && Math.random() < 0.2; // 20% fake balls at level 8+
+                this.originalRadius = Math.random() * (MAX_BALL_SIZE - MIN_BALL_SIZE) + MIN_BALL_SIZE;
+                this.radius = this.originalRadius;
+                this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
+                this.y = -this.radius;
+                this.zigzagPhase = Math.random() * Math.PI * 2;
+                this.shrinkTimer = 0;
+                
+                if (this.isTrap) {
+                    this.speed = Math.random() * (MAX_BALL_SPEED - MIN_BALL_SPEED) + MIN_BALL_SPEED;
+                    this.color = '#000000';
+                    this.glowColor = '#ff0000';
+                    this.points = -10;
+                } else if (this.isFake) {
+                    this.speed = Math.random() * (MAX_BALL_SPEED - MIN_BALL_SPEED) + MIN_BALL_SPEED;
+                    this.color = '#00ff00'; // Looks like bonus ball
+                    this.glowColor = '#00ff00';
+                    this.points = 0; // No points, but looks valuable
+                } else {
+                    this.speed = Math.random() * (MAX_BALL_SPEED - MIN_BALL_SPEED) + MIN_BALL_SPEED;
+                    this.color = this.getRandomNeonColor();
+                    this.glowColor = this.getGlowColor();
+                    this.points = Math.floor((MAX_BALL_SIZE - this.radius) + MAX_BALL_SPEED - this.speed + 10);
+                }
+                
+                this.vy = this.speed;
+                this.vx = 0;
+            }
+
+            getRandomNeonColor() {
+                const colors = ['#00ffff', '#ffff00', '#ff00aa', '#00ff00', '#ff6600'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            getGlowColor() {
+                const glowColors = ['#00ffff', '#ffff00', '#ff00aa', '#00ff00', '#ff6600'];
+                return glowColors[Math.floor(Math.random() * glowColors.length)];
+            }
+
+            update() {
+                // Apply gravity based on level
+                if (level >= 8) {
+                    this.vy += gravity;
+                }
+                
+                // Zigzag movement for levels 5-7
+                if (level >= 5 && level <= 7) {
+                    this.zigzagPhase += 0.1;
+                    this.vx = Math.sin(this.zigzagPhase) * zigzagAmplitude;
+                }
+                
+                // Shrinking for levels 5-7
+                if (level >= 5 && level <= 7) {
+                    this.shrinkTimer += 0.01;
+                    this.radius = this.originalRadius * Math.max(0.5, 1 - this.shrinkTimer * shrinkingRate);
+                }
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Bounce off walls for high levels
+                if (level >= 8) {
+                    if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
+                        this.vx *= -0.8;
+                        this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                
+                if (this.isTrap) {
+                    // Draw trap ball - black with red glow and skull
+                    ctx.shadowBlur = 30;
+                    ctx.shadowColor = '#ff0000';
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#000000';
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = `bold ${this.radius}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('💀', this.x, this.y);
+                    
+                } else if (this.isFake) {
+                    // Draw fake ball - looks like bonus but with subtle differences
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#00ff00';
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#00ff00';
+                    ctx.fill();
+                    
+                    // Subtle pulsing effect
+                    ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 12px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('?', this.x, this.y); // Question mark instead of points
+                    
+                } else {
+                    // Draw normal ball
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = this.glowColor;
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 12px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.points, this.x, this.y);
+                }
+                
+                ctx.restore();
+            }
+
+            isClicked(x, y) {
+                const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
+                return distance <= this.radius;
+            }
+
+            isOffScreen() {
+                return this.y - this.radius > canvas.height;
+            }
+        }
+
+        // ==================== PARTICLE CLASS ====================
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8;
+                this.radius = Math.random() * 3 + 1;
+                this.color = color;
+                this.life = 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.1;
+                this.life -= 0.02;
+                this.radius *= 0.98;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            isDead() {
+                return this.life <= 0 || this.radius <= 0.1;
+            }
+        }
+
+        // ==================== GAME FUNCTIONS ====================
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('pauseMenu').classList.add('hidden');
+            
+            score = 0;
+            level = 1;
+            timeLeft = GAME_DURATION;
+            currentBallSpawnRate = INITIAL_BALL_SPAWN_RATE;
+            balls = [];
+            particles = [];
+            gameRunning = true;
+            isPaused = false;
+            isShaking = false;
+            
+            // Reset level-specific properties
+            gravity = 0.1;
+            zigzagAmplitude = 0;
+            shrinkingRate = 0;
+            backgroundTint = 'rgba(0, 0, 0, 0)';
+            
+            updateUI();
+            updateLevelProperties();
+            
+            // Start timers
+            gameTimer = setInterval(updateTimer, 1000);
+            ballSpawnTimer = setInterval(spawnBall, currentBallSpawnRate);
+            
+            // Start game loop
+            gameLoop();
+        }
+
+        function pauseGame() {
+            if (!gameRunning || isPaused) return;
+            
+            isPaused = true;
+            clearInterval(gameTimer);
+            clearInterval(ballSpawnTimer);
+            
+            document.getElementById('pauseMenu').classList.remove('hidden');
+            document.body.classList.add('blurred');
+        }
+
+        function resumeGame() {
+            if (!isPaused) return;
+            
+            isPaused = false;
+            document.getElementById('pauseMenu').classList.add('hidden');
+            document.body.classList.remove('blurred');
+            
+            // Restart timers
+            gameTimer = setInterval(updateTimer, 1000);
+            ballSpawnTimer = setInterval(spawnBall, currentBallSpawnRate);
+            
+            gameLoop();
+        }
+
+        function toggleSettings() {
+            const settingsPanel = document.getElementById('settingsPanel');
+            settingsPanel.classList.toggle('hidden');
+        }
+
+        function updateVolume(value) {
+            musicVolume = value / 100;
+            document.getElementById('volumeValue').textContent = value + '%';
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            document.getElementById('timeValue').textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function spawnBall() {
+            if (gameRunning) {
+                balls.push(new Ball());
+            }
+        }
+
+        function handleMouseDown(event) {
+            event.preventDefault();
+        }
+
+        function handleTouchStart(event) {
+            event.preventDefault();
+        }
+
+        function handleTouchEnd(event) {
+            event.preventDefault();
+            if (!gameRunning) return;
+            
+            const touch = event.changedTouches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            
+            checkBallClick(x, y);
+        }
+
+        function handleClick(event) {
+            if (!gameRunning) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            checkBallClick(x, y);
+        }
+
+        function checkBallClick(x, y) {
+            for (let i = balls.length - 1; i >= 0; i--) {
+                if (balls[i].isClicked(x, y)) {
+                    const clickedBall = balls[i];
+                    
+                    // Create particles
+                    for (let j = 0; j < 15; j++) {
+                        particles.push(new Particle(clickedBall.x, clickedBall.y, clickedBall.color));
+                    }
+                    
+                    if (clickedBall.isTrap) {
+                        // Trap ball clicked - penalty and screen shake
+                        score = Math.max(0, score + clickedBall.points);
+                        triggerScreenShake();
+                    } else if (clickedBall.isFake) {
+                        // Fake ball clicked - no points but visual feedback
+                        // Could add a "wasted" effect here
+                    } else {
+                        // Normal ball clicked
+                        score += clickedBall.points;
+                    }
+                    
+                    updateLevel();
+                    updateUI();
+                    balls.splice(i, 1);
+                    break;
+                }
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('scoreValue').textContent = score;
+            document.getElementById('levelValue').textContent = level;
+        }
+
+        function updateLevel() {
+            const newLevel = Math.min(MAX_LEVEL, level + 1);
+            
+            // Check if player reached next level threshold
+            if (score >= POINTS_PER_LEVEL[level] && level < MAX_LEVEL) {
+                level = newLevel;
+                
+                // Add time bonus for reaching new level
+                timeLeft += TIME_BONUS_PER_LEVEL;
+                
+                // Update level-specific properties
+                updateLevelProperties();
+                
+                // Increase difficulty
+                currentBallSpawnRate = Math.max(300, INITIAL_BALL_SPAWN_RATE - (level - 1) * 80);
+                
+                // Restart spawn timer with new rate
+                clearInterval(ballSpawnTimer);
+                ballSpawnTimer = setInterval(spawnBall, currentBallSpawnRate);
+                
+                updateUI();
+            }
+        }
+
+        function updateLevelProperties() {
+            switch(level) {
+                case 1:
+                    gravity = 0.1;
+                    zigzagAmplitude = 0;
+                    shrinkingRate = 0;
+                    backgroundTint = 'rgba(0, 0, 0, 0)';
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                    // Increase speed and change background tint
+                    gravity = 0.15;
+                    zigzagAmplitude = 0;
+                    shrinkingRate = 0;
+                    backgroundTint = `rgba(${level * 20}, 0, ${255 - level * 30}, 0.1)`;
+                    break;
+                case 5:
+                case 6:
+                case 7:
+                    // Balls shrink and move in zigzag
+                    gravity = 0.2;
+                    zigzagAmplitude = 2 + level;
+                    shrinkingRate = 0.02;
+                    backgroundTint = `rgba(${level * 30}, ${level * 10}, ${255 - level * 40}, 0.15)`;
+                    break;
+                case 8:
+                case 9:
+                case 10:
+                    // Gravity changes, balls bounce, fake balls appear
+                    gravity = 0.3 + (level - 8) * 0.1;
+                    zigzagAmplitude = 0;
+                    shrinkingRate = 0;
+                    backgroundTint = `rgba(${255}, ${level * 20}, ${level * 30}, 0.2)`;
+                    break;
+            }
+            
+            // Update background tint
+            document.body.style.background = `linear-gradient(135deg, ${backgroundTint} 0%, #1a0033 100%)`;
+        }
+
+        function triggerScreenShake() {
+            if (isShaking) return;
+            
+            isShaking = true;
+            document.body.classList.add('shaking');
+            
+            setTimeout(() => {
+                document.body.classList.remove('shaking');
+                isShaking = false;
+            }, 500);
+        }
+
+        function gameLoop() {
+            if (!gameRunning || isPaused) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Update and draw balls
+            for (let i = balls.length - 1; i >= 0; i--) {
+                balls[i].update();
+                balls[i].draw();
+                
+                if (balls[i].isOffScreen()) {
+                    balls.splice(i, 1);
+                }
+            }
+            
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                
+                if (particles[i].isDead()) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            gameRunning = false;
+            clearInterval(gameTimer);
+            clearInterval(ballSpawnTimer);
+            cancelAnimationFrame(animationId);
+            
+            // Update high score
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('ballCatcherHighScore', highScore);
+                document.getElementById('highScoreValue').textContent = highScore;
+            }
+            
+            // Show game over screen
+            document.getElementById('finalScoreValue').textContent = score;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            
+            // Get AI comment
+            getAIComment(score);
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        // ==================== AI COMMENT FUNCTION ====================
+        async function getAIComment(score) {
+            const aiCommentElement = document.getElementById('aiComment');
+            
+            if (GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+                aiCommentElement.innerHTML = 'Add your Gemini API key to get funny comments! 🤖';
+                return;
+            }
+            
+            try {
+                const prompt = `Write a very funny, witty, and entertaining comment about someone scoring ${score} points and reaching level ${level} in a ball catching game. 
+                Be creative and humorous. Keep it under 100 characters. Make it sound like a game show host or comedian.`;
+                
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    const comment = data.candidates[0].content.parts[0].text.trim();
+                    aiCommentElement.innerHTML = comment;
+                } else {
+                    aiCommentElement.innerHTML = 'Even the AI is speechless! 🤯';
+                }
+            } catch (error) {
+                console.error('Error getting AI comment:', error);
+                aiCommentElement.innerHTML = 'The AI is taking a coffee break! ☕';
+            }
+        }
+
+        // ==================== INIT ====================
+        init();
+    </script>
+</body>
+</html>
